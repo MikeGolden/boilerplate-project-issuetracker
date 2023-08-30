@@ -1,141 +1,233 @@
-"use strict";
-// MongoDb && Mongoose
-require("dotenv").config();
-require("mongodb");
-const { ObjectId } = require("mongodb");
-const mongoose = require("mongoose");
-const { Schema } = mongoose;
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-const issueSchema = new Schema({
-  issue_title: { type: String, required: true },
-  issue_text: { type: String, required: true },
-  created_by: { type: String, required: true },
-  assigned_to: { type: String, default: "" },
-  created_on: Date,
-  updated_on: Date,
-  status_text: { type: String, default: "" },
-  open: { type: Boolean, default: true },
-  project: String,
-});
-const Issue = mongoose.model("Issue", issueSchema);
+/*
+*
+*
+*       Complete the API routing below
+*
+*
+*/
+
+'use strict';
+
+var expect = require('chai').expect;
+var MongoClient = require('mongodb').MongoClient;
+var ObjectId = require('mongodb').ObjectID;
 
 module.exports = function (app) {
-  app
-    .route("/api/issues/:project")
 
-    .get(function (req, res) {
-      if (!req.params.project) {
-        res.json({ error: "missing project" });
-        return;
-      }
+	app.route('/api/issues/:project')
+		.get(function (req, res) {
+			var project = req.params.project;
 
-      const query = Object.assign(req.query, { project: req.params.project });
-      Issue.find(query)
-        .select("-__v -project")
-        .exec((err, docsArr) => {
-          if (err) return console.log(err);
-          res.send(docsArr);
-        });
-    })
+			// let searchQuery = { req.query };
+			let searchQuery = { project };
 
-    .post(function (req, res) {
-      const body = req.body;
+			if (req.query._id !== undefined) { searchQuery['_id'] = new ObjectId(req.query._id); }
 
-      if (!body.issue_title || !body.issue_text || !body.created_by) {
-        res.json({ error: "required field(s) missing" });
-        return;
-      }
+			if (req.query.issue_title !== undefined) { searchQuery['issue_title'] = req.query.issue_title; }
 
-      const date = new Date();
-      const obj = Object.assign({}, body, {
-        created_on: date,
-        updated_on: date,
-        open: body.status_text === false ? false : true,
-        project: req.params.project,
-      });
-      new Issue(obj).save((err, doc) => {
-        if (err) return console.error(err);
-        const issue = doc._doc;
-        // Object.assign({}, doc._doc, {
-        //   status_text: "",
-        //   assigned_to: "",
-        // });
-        delete issue.project;
-        delete issue.__v;
-        res.json(issue);
-        return;
-      });
-    })
+			if (req.query.issue_text !== undefined) { searchQuery['issue_text'] = req.query.issue_text; }
 
-    .put(function (req, res) {
-      const _id = req.body._id;
+			if (req.query.created_by !== undefined) { searchQuery['created_by'] = req.query.created_by; }
 
-      if (!_id || /\s+/.test(_id)) res.json({ error: "missing _id" });
-      else if (Object.values(req.body).length < 2)
-        res.json({ error: "no update field(s) sent", _id: _id });
-      else {
-        try {
-          ObjectId(_id);
-        } catch {
-          res.json({ error: "could not update" });
-          return;
-        }
+			if (req.query.assigned_to !== undefined) { searchQuery['assigned_to'] = req.query.assigned_to; }
 
-        let update = Object.assign({}, req.body, { updated_on: new Date() });
+			if (req.query.status_text !== undefined) { searchQuery['status_text'] = req.query.status_text; }
 
-        for (const key in update) {
-          if (key === "_id") delete update[key];
-          if (!update[key]) delete update[key];
-        }
+			if (req.query.created_on !== undefined) { searchQuery['created_on'] = new Date(req.query.created_on); }
 
-        Issue.findOneAndUpdate(
-          { _id: _id },
-          update,
-          { new: true },
-          (err, doc) => {
-            if (err || !doc) {
-              res.json({ error: "could not update", _id });
-              return console.log(err);
-            }
-            res.json({ result: "successfully updated", _id: _id });
-          }
-        );
-      }
-    })
+			if (req.query.updated_on !== undefined) { searchQuery['updated_on'] = new Date(req.query.updated_on); }
 
-    .delete(function (req, res) {
-      if (!req.body._id) {
-        res.json({ error: "missing _id" });
-        return;
-      }
-      const _id = req.body._id;
+			if (req.query.open !== undefined) {
+				if (req.query.open === 'true') {
+					searchQuery['open'] = true;
+				} else if (req.query.open === 'false') {
+					searchQuery['open'] = false;
+				}
+			}
 
-      try {
-        ObjectId(_id);
+			MongoClient.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, db) {
+				if (err) {
+					// console.log('Database error: ' + err);
+					return res.json({ error: 'error' });
+				} else {
+					db.db().collection('issuetracker').find(searchQuery).toArray(function (err, docs) {
+						return res.json(docs);
+					});
+				}
+			});
+		})
+		.post(function (req, res) {
+			if (
+				req.body.issue_title === undefined || req.body.issue_title === ''
+				||
+				req.body.issue_text === undefined || req.body.issue_text === ''
+				||
+				req.body.created_by === undefined || req.body.created_by === ''
+			) {
+				return res.json({ error: 'required field(s) missing' });
+			}
 
-        Issue.findOneAndDelete({ _id: _id }, (err, doc) => {
-          if (!doc) {
-            res.json({
-              error: "could not delete",
-              _id: _id,
-            });
-            return;
-          }
+			var project = req.params.project;
+			let issue_title = req.body.issue_title;
+			let issue_text = req.body.issue_text;
+			let created_by = req.body.created_by;
+			let assigned_to = (req.body.assigned_to !== undefined ? req.body.assigned_to : '');
+			let status_text = (req.body.status_text !== undefined ? req.body.status_text : '');
 
-          res.json({
-            result: "successfully deleted",
-            _id: doc._id,
-          });
-        });
-      } catch (error) {
-        res.json({
-          error: "could not delete",
-          _id,
-        });
-        return;
-      }
-    });
+			let date = new Date();
+
+			MongoClient.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, db) {
+				if (err) {
+					// console.log('Database error: ' + err);
+					return res.json({ error: 'error' });
+				} else {
+					let obj = {
+						project: project,
+						issue_title: issue_title,
+						issue_text: issue_text,
+						created_by: created_by,
+						assigned_to: assigned_to,
+						status_text: status_text,
+						created_on: date,
+						updated_on: date,
+						open: true
+					};
+
+					db.db().collection('issuetracker').insertOne(
+						obj,
+						function (err, doc) {
+							return res.json({ '_id': doc['insertedId'], ...obj });
+						}
+					);
+				}
+			});
+		})
+		.put(function (req, res) {
+			var project = req.params.project;
+
+			if (req.body._id === undefined || req.body._id === '') {
+				return res.json({ error: 'missing _id' });
+			}
+
+			let _id = req.body._id;
+
+			if (
+				req.body.issue_title === undefined
+				&&
+				req.body.issue_text === undefined
+				&&
+				req.body.created_by === undefined
+				&&
+				req.body.assigned_to === undefined
+				&&
+				req.body.status_text === undefined
+				&&
+				req.body.open === undefined
+			) {
+				return res.json({
+					'error': 'no update field(s) sent',
+					'_id': _id
+				});
+			}
+
+			let set_obj = {};
+
+			if (req.body.issue_title !== undefined) {
+				set_obj['issue_title'] = req.body.issue_title;
+			}
+
+			if (req.body.issue_text !== undefined) {
+				set_obj['issue_text'] = req.body.issue_text;
+			}
+
+			if (req.body.created_by !== undefined) {
+				set_obj['created_by'] = req.body.created_by;
+			}
+
+			if (req.body.assigned_to !== undefined) {
+				set_obj['assigned_to'] = req.body.assigned_to;
+			}
+
+			if (req.body.status_text !== undefined) {
+				set_obj['status_text'] = req.body.status_text;
+			}
+
+			set_obj['updated_on'] = new Date();
+
+			if (req.body.open !== undefined) {
+				if (req.body.open === 'true') {
+					set_obj['open'] = true;
+				} else if (req.body.open === 'false') {
+					set_obj['open'] = false;
+				}
+			}
+
+			MongoClient.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, db) {
+				if (err) {
+					// console.log('Database error: ' + err);
+					return res.json({ error: 'error' });
+				} else {
+					db.db().collection('issuetracker').findOneAndUpdate(
+						{
+							project: project,
+							_id: new ObjectId(_id)
+						},
+						{ $set: set_obj },
+						{ returnDocument: 'after' }, // Return the updated document
+						function (error, result) {
+							if (result.ok === 1 && result.value !== null) {
+								return res.json({
+									'result': 'successfully updated',
+									'_id': _id
+								});
+							} else {
+								return res.json({
+									'error': 'could not update',
+									'_id': _id
+								});
+							}
+							// return res.json(result.value);
+						}
+					);
+				}
+			});
+		})
+		.delete(function (req, res) {
+			var project = req.params.project;
+
+			if (req.body._id === undefined || req.body._id === '') {
+				return res.json({ error: 'missing _id' });
+			}
+
+			let _id = req.body._id;
+
+			MongoClient.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, db) {
+				if (err) {
+					// console.log('Database error: ' + err);
+					return res.json({ error: 'error' });
+				} else {
+					db.db().collection('issuetracker').findOneAndDelete(
+						{
+							project: project,
+							_id: new ObjectId(_id)
+						},
+						function (error, result) {
+							if (result.ok === 1 && result.value !== null) {
+								return res.json({
+									'result': 'successfully deleted',
+									'_id': _id
+								});
+							} else {
+								return res.json({
+									'error': 'could not delete',
+									'_id': _id
+								});
+							}
+							// return res.json(result.value);
+						}
+					);
+				}
+			});
+		});
+
 };

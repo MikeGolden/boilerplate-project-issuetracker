@@ -1,270 +1,290 @@
-const chaiHttp = require("chai-http");
-const chai = require("chai");
-const assert = chai.assert;
-const server = require("../server");
-const Browser = require("zombie");
-Browser.site = "localhost:3000";
+/*
+*
+*
+*       FILL IN EACH FUNCTIONAL TEST BELOW COMPLETELY
+*       -----[Keep the tests in the same order!]-----
+*       (if additional are added, keep them at the very end!)
+*/
+
+var chaiHttp = require('chai-http');
+var chai = require('chai');
+var assert = chai.assert;
+var server = require('../server');
 
 chai.use(chaiHttp);
 
-suite("Functional Tests", function () {
-  this.timeout(10000);
-  
+suite('Functional Tests', function () {
 
-  var browser = new Browser();
-  suiteSetup(function (done) {
-    return browser.visit("/", done);
-  });
+	var _id1;
+	var _id2;
 
-  suite("Headless browser", function () {
-    test('should have a working "site" property', function (done) {
-      assert.isNotNull(browser.site);
-      done();
-    });
-  });
+	suite('POST /api/issues/{project} => object with issue data', function () {
 
-  suite("Tests with POST", function () {
-    test("#1 - Create an issue with every field : POST", function (done) {
-      browser.visit("/").then(() => {
-        browser.fill("issue_title", "some title");
-        browser.fill("issue_text", "some text");
-        browser.fill("created_by", "myself");
-        browser.fill("assigned_to", "you");
-        browser.fill("status_text", "In QA");
-        browser.pressButton("#submit", () => {
-          browser.assert.success();
-          const obj = JSON.parse(browser.text("#jsonResult"));
-          assert.notProperty(obj, "error");
-          assert.property(
-            obj,
-            "created_on",
-            "created_on should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "updated_on",
-            "updated_on should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "open",
-            "open should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "_id",
-            "_id should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "issue_title",
-            "issue-title should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "issue_text",
-            "issue_text should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "created_by",
-            "created_by should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "assigned_to",
-            "assign_to should be property of the returned object"
-          );
-          assert.property(
-            obj,
-            "status_text",
-            "statue_text should be property of the returned object"
-          );
-          assert.typeOf(obj, "object");
-          done();
-        });
-      });
-    });
+		test('Every field filled in', function (done) {
+			chai.request(server)
+				.post('/api/issues/test')
+				.send({
+					issue_title: 'Title',
+					issue_text: 'Text',
+					created_by: 'Functional Test - Every field filled in',
+					assigned_to: 'Chai and Mocha',
+					status_text: 'In QA'
+				})
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					//fill me in too!
+					assert.isObject(res.body);
+					assert.property(res.body, '_id');
+					assert.property(res.body, 'project');
+					assert.property(res.body, 'issue_title');
+					assert.property(res.body, 'issue_text');
+					assert.property(res.body, 'created_on');
+					assert.property(res.body, 'updated_on');
+					assert.property(res.body, 'created_by');
+					assert.property(res.body, 'assigned_to');
+					assert.property(res.body, 'status_text');
+					assert.property(res.body, 'open');
+					assert.notEqual(res.body._id, '');
+					assert.equal(res.body.project, 'test');
+					assert.equal(res.body.issue_title, 'Title');
+					assert.equal(res.body.issue_text, 'Text');
+					assert.equal(res.body.created_by, 'Functional Test - Every field filled in');
+					assert.equal(res.body.assigned_to, 'Chai and Mocha');
+					assert.equal(res.body.status_text, 'In QA');
+					assert.isBoolean(res.body.open, true);
+					assert.equal(res.body.open, true);
+					_id1 = res.body._id;
+					done();
+				});
+		});
 
-    test("#2 - Create an issue with only required fields : POST", function (done) {
-      browser.visit("/").then(() => {
-        browser.fill("issue_title", "some title");
-        browser.fill("issue_text", "some text");
-        browser.fill("created_by", "myself");
-        browser.pressButton("#submit", () => {
-          browser.assert.success();
-          const obj = JSON.parse(browser.text("#jsonResult"));
-          assert.notProperty(obj, "error");
-          done();
-        });
-      });
-    });
+		test('Required fields filled in', function (done) {
+			chai.request(server)
+				.post('/api/issues/test')
+				.send({
+					issue_title: 'Title 2',
+					issue_text: 'Text 2',
+					created_by: 'Required fields filled in',
+				})
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, '_id');
+					assert.property(res.body, 'project');
+					assert.property(res.body, 'issue_title');
+					assert.property(res.body, 'issue_text');
+					assert.property(res.body, 'created_on');
+					assert.property(res.body, 'updated_on');
+					assert.property(res.body, 'created_by');
+					assert.property(res.body, 'assigned_to');
+					assert.property(res.body, 'status_text');
+					assert.property(res.body, 'open');
+					assert.notEqual(res.body._id, '');
+					assert.equal(res.body.project, 'test');
+					assert.equal(res.body.issue_title, 'Title 2');
+					assert.equal(res.body.issue_text, 'Text 2');
+					assert.equal(res.body.created_by, 'Required fields filled in');
+					assert.equal(res.body.assigned_to, '');
+					assert.equal(res.body.status_text, '');
+					assert.isBoolean(res.body.open, true);
+					assert.equal(res.body.open, true);
+					_id2 = res.body._id;
+					done();
+				});
+		});
 
-    test("#3 - Create an issue with missing required fields : POST", function (done) {
-      browser.visit("/").then(() => {
-        browser.fill("issue_title", "Some title");
-        browser.fill("issue_text", "just some random text");
-        browser.pressButton("#submit", () => {
-          browser.assert.success();
-          assert.property(JSON.parse(browser.text("#jsonResult")), 'error');
-          done();
-        });
-      });
-    });
-  });
+		test('Missing required fields', function (done) {
+			chai.request(server)
+				.post('/api/issues/test')
+				.send({})
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, 'error');
+					assert.equal(res.body.error, 'required field(s) missing');
+					done();
+				});
+		});
 
-  suite("Test with GET", function () {
-    test("#4 - View issues on a project : GET", function (done) {
-      chai
-        .request(server)
-        .get("/api/issues/apitest")
-        .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.typeOf(res.body, "array");
-          assert.isAtLeast(res.body.length, 1);
-          done();
-        });
-    });
+	});
 
-    test("#5 - Views issues with one filter : GET", function (done) {
-      chai
-        .request(server)
-        .get("/api/issues/apitest")
-        .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.typeOf(res.body, "array");
-          done();
-        });
-    });
+	suite('GET /api/issues/{project} => Array of objects with issue data', function () {
 
-    test("#6 - View issues with multiple filters : GET", function (done) {
-      chai
-        .request(server)
-        .get("/api/issues/apitest")
-        .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.typeOf(res.body, "array");
-          done();
-        });
-    });
-  });
+		test('No filter', function (done) {
+			chai.request(server)
+				.get('/api/issues/test')
+				.query({})
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isArray(res.body);
+					assert.property(res.body[0], '_id');
+					assert.property(res.body[0], 'issue_title');
+					assert.property(res.body[0], 'issue_text');
+					assert.property(res.body[0], 'created_on');
+					assert.property(res.body[0], 'updated_on');
+					assert.property(res.body[0], 'created_by');
+					assert.property(res.body[0], 'assigned_to');
+					assert.property(res.body[0], 'status_text');
+					assert.property(res.body[0], 'open');
+					done();
+				});
+		});
 
-  suite("Tests with PUT", function () {
-    this.beforeEach(function (done) {
-      browser.visit("/", function () {
-        browser.fill("issue_title", "Coucou");
-        browser.fill("issue_text", "Mame Bauye");
-        browser.fill("created_by", "my own");
-        browser.pressButton("#submit", function () {
-          done();
-        });
-      });
-    });
+		test('One filter', function (done) {
+			chai.request(server)
+				.get('/api/issues/test')
+				.query({ open: true })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isArray(res.body);
+					assert.property(res.body[0], '_id');
+					assert.property(res.body[0], 'issue_title');
+					assert.property(res.body[0], 'issue_text');
+					assert.property(res.body[0], 'created_on');
+					assert.property(res.body[0], 'updated_on');
+					assert.property(res.body[0], 'created_by');
+					assert.property(res.body[0], 'assigned_to');
+					assert.property(res.body[0], 'status_text');
+					assert.property(res.body[0], 'open');
+					assert.isBoolean(res.body[0].open, true);
+					assert.equal(res.body[0].open, true);
+					done();
+				});
+		});
 
-  test("#7 - Update one field on an issue : PUT", function (done) {
-    browser.fill("#id2", JSON.parse(browser.text("#jsonResult"))._id);
-    browser.fill("#issue_title2", "updated title");
-    browser.pressButton("#submit2").then(() => {
-      browser.assert.success();
-      assert.property(JSON.parse(browser.text("#jsonResult")), "_id");
-      assert.equal(
-        JSON.parse(browser.text("#jsonResult")).result,
-        "successfully updated"
-      );
-      done();
-    });
-  });
+		test('Multiple filters (test for multiple fields you know will be in the db for a return)', function (done) {
+			chai.request(server)
+				.get('/api/issues/test')
+				.query({ issue_title: 'Title', issue_text: 'Text', open: true })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isArray(res.body);
+					assert.property(res.body[0], '_id');
+					assert.property(res.body[0], 'issue_title');
+					assert.property(res.body[0], 'issue_text');
+					assert.property(res.body[0], 'created_on');
+					assert.property(res.body[0], 'updated_on');
+					assert.property(res.body[0], 'created_by');
+					assert.property(res.body[0], 'assigned_to');
+					assert.property(res.body[0], 'status_text');
+					assert.property(res.body[0], 'open');
+					assert.equal(res.body[0].issue_title, 'Title');
+					assert.equal(res.body[0].issue_text, 'Text');
+					assert.isBoolean(res.body[0].open, true);
+					assert.equal(res.body[0].open, true);
+					done();
+				});
+		});
 
-  test("#8 - Update multiple fields on an issue : PUT", function (done) {
-    browser.fill("#id2", JSON.parse(browser.text("#jsonResult"))._id);
-    browser.fill("#issue_title2", "newly updated title");
-    browser.fill("#issue_text2", "updated text");
-    browser.pressButton("#submit2", function () {
-      browser.assert.success();
-      assert.equal(
-        JSON.parse(browser.text("#jsonResult")).result,
-        "successfully updated"
-      );
-      done();
-    });
-  });
+	});
 
-  test("#9 - Update an issue with missing _id : PUT", function (done) {
-    chai
-      .request(server)
-      .put("/api/issues/apitest")
-      .end(function (err, res) {
-        assert.equal(res.status, 200);
-        assert.equal(res.body.error, "missing _id");
-        done();
-      });
-  });
+	suite('PUT /api/issues/{project} => text', function () {
 
-    test("#10 - Update an issue with no fields to update : PUT", function (done) {
-      const id = JSON.parse(browser.text("#jsonResult"))._id;
-      chai
-        .request(server)
-        .put("/api/issues/apitest")
-        .send({ _id: id })
-        .end(function (err, res) {
-          assert.equal(res.status, 200)
-          assert.equal(res.body.error, "no update field(s) sent");
-          done();
-        });
-    });
-  });
+		test('One field to update', function (done) {
+			chai.request(server)
+				.put('/api/issues/test')
+				.send({ _id: _id1, issue_title: 'Title (updated)' })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.equal(res.body.result, 'successfully updated');
+					done();
+				});
+		});
 
-  suite("Tests with DELETE", function () {
-    this.beforeAll(function (done) {
-      browser.visit("/", function () {
-        browser.fill("issue_title", "Coucou");
-        browser.fill("issue_text", "Mame Bauye");
-        browser.fill("created_by", "my own");
-        browser.pressButton("#submit", function () {
-          done();
-        });
-      });
-    });
+		test('Multiple fields to update', function (done) {
+			chai.request(server)
+				.put('/api/issues/test')
+				.send({ _id: _id2, issue_title: 'Title 2 (updated)', issue_text: 'Text 2 (updated)', open: false })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.equal(res.body.result, 'successfully updated');
+					done();
+				});
+		});
 
-    test("#12 - Delete an issue : DELETE", function (done) {
-      const _id = JSON.parse(browser.text("#jsonResult"))._id;
+		test('Update an issue with missing _id', function (done) {
+			chai.request(server)
+				.put('/api/issues/test')
+				.send({ open: false })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, 'error');
+					assert.equal(res.body.error, 'missing _id');
+					done();
+				});
+		});
 
-      browser.visit("/", function () {
-        chai
-          .request(server)
-          .delete("/api/issues/apitest")
-          .send({ _id: _id })
-          .end(function (err, res) {
-            assert.equal(res.status, 200);
-            assert.equal(res.body.result, "successfully deleted");
-            assert.property(res.body, "_id");
-            done();
-          });
-      });
-    });
+		test('No update field sent', function (done) {
+			chai.request(server)
+				.put('/api/issues/test')
+				.send({ _id: _id1 })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, 'error');
+					assert.equal(res.body.error, 'no update field(s) sent');
+					done();
+				});
+		});
 
-    test("#13 - Delete an issue with an invalid _id : DELETE", function (done) {
-      chai
-        .request(server)
-        .delete("/api/issues/apitest")
-        .send({ _id: "mamebauyooooooo" })
-        .end(function (err, res) {
-          assert.property(res.body, "_id");
-          assert.equal(res.body.error, "could not delete");
-          done();
-        });
-    });
+		test('Update an issue with an invalid _id', function (done) {
+			chai.request(server)
+				.put('/api/issues/test')
+				.send({ _id: '000000000000000000000000', open: false })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, 'error');
+					assert.equal(res.body.error, 'could not update');
+					assert.equal(res.body._id, '000000000000000000000000');
+					done();
+				});
+		});
 
-    test("#14 - Delete an issue with a missing _id : DELETE", function (done) {
-      chai
-        .request(server)
-        .delete("/api/issues/apitest")
-        .send({})
-        .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.equal(res.body.error, "missing _id");
-          done();
-        });
-    });
-  });
+	});
+
+	suite('DELETE /api/issues/{project} => text', function () {
+
+		test('Valid _id', function (done) {
+			chai.request(server)
+				.delete('/api/issues/test')
+				.send({ _id: _id2 })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.equal(res.body.result, 'successfully deleted');
+					assert.equal(res.body._id, _id2);
+					done();
+				});
+		});
+
+		test('Invalid _id', function (done) {
+			chai.request(server)
+				.delete('/api/issues/test')
+				.send({ _id: '000000000000000000000000' })
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, 'error');
+					assert.equal(res.body.error, 'could not delete');
+					assert.equal(res.body._id, '000000000000000000000000');
+					done();
+				});
+		});
+
+		test('Missing _id', function (done) {
+			chai.request(server)
+				.delete('/api/issues/test')
+				.send({})
+				.end(function (err, res) {
+					assert.equal(res.status, 200);
+					assert.isObject(res.body);
+					assert.property(res.body, 'error');
+					assert.equal(res.body.error, 'missing _id');
+					done();
+				});
+		});
+
+	});
+
 });
